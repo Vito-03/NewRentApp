@@ -1,12 +1,14 @@
 package com.newrent;
 
 import com.newrent.operazioni.Op1;
+import com.newrent.operazioni.Op2;
 
 import javax.swing.*;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 public class NewRentApp {
 
@@ -109,10 +111,10 @@ public class NewRentApp {
                         int anno = Integer.parseInt(annoField.getText());
                         int km = Integer.parseInt(kmField.getText());
                         double prezzo = Double.parseDouble(prezzoField.getText());
-                        String tipo = tipoBox.getSelectedItem().toString();
+                        String tipo = (String) tipoBox.getSelectedItem();
                         String dataImm = dataImmField.getText();
                         String dataAcq = dataAcqField.getText();
-                        String stato = statoBox.getSelectedItem().toString();
+                        String stato = (String) statoBox.getSelectedItem();
                         String targa = targaField.getText();
                         String concessionaria = concessionariaField.getText();
 
@@ -123,7 +125,7 @@ public class NewRentApp {
                                 logTextArea
                         );
                     } catch (Exception ex) {
-                        log("❌ Errore inserimento: " + ex.getMessage());
+                        log("❌ Errore inserimento veicolo: " + ex.getMessage());
                     }
                 });
 
@@ -133,17 +135,219 @@ public class NewRentApp {
                 return;
             }
 
-            case 2 -> log("🔧 Operazione 2: acquisto/noleggio");
-            case 3 -> log("📊 Operazione 3: report accessori per fornitore");
-            case 4 -> log("📈 Operazione 4: statistiche trimestrali");
-            case 5 -> log("📦 Operazione 5: veicoli con ≥2 accessori");
-            case 6 -> log("📄 Operazione 6: fatture cliente");
-            case 7 -> log("📊 Operazione 7: vendite per marca");
-            case 8 -> log("🔍 Operazione 8: ricerca veicoli avanzata");
-        }
+            case 2 -> {
+                JTextField idCliente = aggiungiCampo(dialog, "ID Cliente:");
+                JTextField telaio = aggiungiCampo(dialog, "Numero Telaio:");
+                JTextField data = aggiungiCampo(dialog, "Data Transazione (YYYY-MM-DD):");
+                JTextField importo = aggiungiCampo(dialog, "Importo:");
+                JTextField pagamento = aggiungiCampo(dialog, "Tipo Pagamento:");
 
-        dialog.add(new JLabel("💡 Questa finestra sarà personalizzata per l'operazione."));
-        dialog.setVisible(true);
+                JComboBox<String> tipoTrans = new JComboBox<>(new String[]{"Vendita", "Noleggio"});
+                dialog.add(new JLabel("Tipo Transazione:"));
+                dialog.add(tipoTrans);
+
+                JTextField durata = aggiungiCampo(dialog, "Durata (solo noleggio):");
+
+                JButton conferma2 = new JButton("Conferma");
+                conferma2.addActionListener(ev -> {
+                    try {
+                        String tipo = (String) tipoTrans.getSelectedItem();
+                        Integer durataVal = durata.getText().isBlank() ? null : Integer.parseInt(durata.getText());
+
+                        Op2.registraTransazione(
+                                databaseConnection,
+                                idCliente.getText(),
+                                telaio.getText(),
+                                LocalDate.parse(data.getText()),
+                                Double.parseDouble(importo.getText()),
+                                pagamento.getText(),
+                                tipo,
+                                durataVal,
+                                logTextArea
+                        );
+                    } catch (Exception ex) {
+                        log("❌ Errore registrazione transazione: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel());
+                dialog.add(conferma2);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 3 -> {
+                JTextField fornitoreField = aggiungiCampo(dialog, "Nome Fornitore:");
+
+                JButton conferma = new JButton("Genera Report");
+                conferma.addActionListener(ev -> {
+                    try {
+                        String nomeFornitore = fornitoreField.getText();
+                        if (nomeFornitore.isBlank()) {
+                            log("⚠️ Inserisci il nome del fornitore.");
+                            return;
+                        }
+
+                        com.newrent.operazioni.Op3.stampaAccessoriPerFornitore(
+                                databaseConnection,
+                                nomeFornitore,
+                                logTextArea
+                        );
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        log("❌ Errore OP3: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel());
+                dialog.add(conferma);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 4 -> {
+                JButton esegui = new JButton("Mostra Statistiche");
+                esegui.addActionListener(ev -> {
+                    try {
+                        com.newrent.operazioni.Op4.mostraStatisticheTrimestrali(
+                                databaseConnection,
+                                logTextArea
+                        );
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        log("❌ Errore OP4: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel()); // Spazio vuoto layout
+                dialog.add(esegui);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 5 -> {
+                JButton esegui = new JButton("Mostra Veicoli");
+                esegui.addActionListener(ev -> {
+                    try {
+                        com.newrent.operazioni.Op5.mostraVeicoliConAccessori(
+                                databaseConnection,
+                                logTextArea
+                        );
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        log("❌ Errore OP5: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel()); // spazio vuoto per layout
+                dialog.add(esegui);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 6 -> {
+                JTextField clienteField = aggiungiCampo(dialog, "ID Cliente:");
+
+                JButton conferma = new JButton("Visualizza Fatture");
+                conferma.addActionListener(ev -> {
+                    try {
+                        String idCliente = clienteField.getText();
+                        if (idCliente.isBlank()) {
+                            log("⚠️ Inserisci un ID cliente valido.");
+                            return;
+                        }
+
+                        com.newrent.operazioni.Op6.mostraFattureCliente(
+                                databaseConnection,
+                                idCliente,
+                                logTextArea
+                        );
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        log("❌ Errore OP6: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel()); // layout filler
+                dialog.add(conferma);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 7 -> {
+                JButton esegui = new JButton("Mostra Statistiche Vendite");
+                esegui.addActionListener(ev -> {
+                    try {
+                        com.newrent.operazioni.Op7.mostraStatisticheVenditePerMarca(
+                                databaseConnection,
+                                logTextArea
+                        );
+                        dialog.dispose();
+                    } catch (Exception ex) {
+                        log("❌ Errore OP7: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel()); // layout filler
+                dialog.add(esegui);
+                dialog.setVisible(true);
+                return;
+            }
+
+            case 8 -> {
+                JTextField marcaField = aggiungiCampo(dialog, "Marca (opzionale):");
+
+                JComboBox<String> tipoBox = new JComboBox<>(new String[]{"", "Nuovo", "Usato"});
+                dialog.add(new JLabel("Tipo (opzionale):"));
+                dialog.add(tipoBox);
+
+                JComboBox<String> statoBox = new JComboBox<>(new String[]{"", "Disponibile", "Venduto", "Noleggiato"});
+                dialog.add(new JLabel("Stato (opzionale):"));
+                dialog.add(statoBox);
+
+                JTextField prezzoMinField = aggiungiCampo(dialog, "Prezzo Min (opzionale):");
+                JTextField prezzoMaxField = aggiungiCampo(dialog, "Prezzo Max (opzionale):");
+
+                JButton conferma = new JButton("Cerca");
+                conferma.addActionListener(ev -> {
+                    try {
+                        String marca = marcaField.getText().trim();
+                        String tipo = tipoBox.getSelectedItem() != null ? tipoBox.getSelectedItem().toString() : "";
+                        String stato = statoBox.getSelectedItem() != null ? statoBox.getSelectedItem().toString() : "";
+                        Double prezzoMin = null;
+                        Double prezzoMax = null;
+
+                        if (!prezzoMinField.getText().isBlank())
+                            prezzoMin = Double.parseDouble(prezzoMinField.getText().trim());
+                        if (!prezzoMaxField.getText().isBlank())
+                            prezzoMax = Double.parseDouble(prezzoMaxField.getText().trim());
+
+                        com.newrent.operazioni.Op8.ricercaAvanzataVeicoli(
+                                databaseConnection,
+                                marca,
+                                tipo,
+                                stato,
+                                prezzoMin,
+                                prezzoMax,
+                                logTextArea
+                        );
+                        dialog.dispose();
+
+                    } catch (NumberFormatException nfe) {
+                        log("⚠️ Inserisci valori numerici validi per i prezzi.");
+                    } catch (Exception ex) {
+                        log("❌ Errore OP8: " + ex.getMessage());
+                    }
+                });
+
+                dialog.add(new JLabel()); // vuoto
+                dialog.add(conferma);
+                dialog.setVisible(true);
+                return;
+            }
+
+            default -> log("🔧 Operazione non ancora implementata.");
+        }
     }
 
     private JTextField aggiungiCampo(JDialog dialog, String nomeCampo) {
